@@ -4,6 +4,8 @@ const gravity: f32 = 7.0;
 
 const Scarfy = struct {
     texture: rl.Texture = undefined,
+    footstep_sound: rl.Sound = undefined,
+    landing_sound: rl.Sound = undefined,
 
     walk_speed: f32 = 6.0,
     jump_charge_max: f32 = 30.0,
@@ -18,6 +20,9 @@ const Scarfy = struct {
     jump_up_frame: i32 = 3,
     jump_down_frame: i32 = 4,
 
+    ground_frames: [2]i32 = .{ 1, 4 },
+    was_grounded: bool = false,
+
     position: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
     velocity: rl.Vector2 = rl.Vector2{ .x = 0, .y = 0 },
 
@@ -27,6 +32,8 @@ const Scarfy = struct {
     pub fn init(self: *Scarfy) void {
         self.texture = rl.loadTexture("resources/scarfy.png");
         self.ground_y = 0.75 * @as(f32, @floatFromInt(rl.getScreenHeight()));
+        self.footstep_sound = rl.loadSound("resources/footstep.mp3");
+        self.landing_sound = rl.loadSound("resources/landing.mp3");
     }
 
     pub fn update(self: *Scarfy) void {
@@ -38,6 +45,20 @@ const Scarfy = struct {
     pub fn draw(self: *const Scarfy) void {
         self.drawScarfy();
         self.drawDebug();
+    }
+
+    pub fn audio(self: *Scarfy) void {
+        if (self.grounded() and !self.was_grounded) {
+            rl.playSound(self.landing_sound);
+        } else if (self.grounded() and self.velocity.x != 0) {
+            for (self.ground_frames) |frame| {
+                if (self.frame_index == frame) {
+                    rl.playSound(self.footstep_sound);
+                    break;
+                }
+            }
+        }
+        self.was_grounded = self.grounded();
     }
 
     fn drawScarfy(self: *const Scarfy) void {
@@ -134,8 +155,10 @@ const Scarfy = struct {
         return self.position.y + @as(f32, @floatFromInt(self.texture.height)) >= self.ground_y;
     }
 
-    fn deinit(self: *Scarfy) void {
+    fn close(self: *Scarfy) void {
         rl.unloadTexture(self.texture);
+        rl.unloadSound(self.footstep_sound);
+        rl.unloadSound(self.landing_sound);
     }
 };
 
@@ -146,11 +169,14 @@ pub fn main() !void {
     rl.initWindow(screenWidth, screenHeight, "Platformer");
     defer rl.closeWindow();
 
+    rl.initAudioDevice();
+    defer rl.closeAudioDevice();
+
     rl.setTargetFPS(60);
 
     var scarfy = Scarfy{};
     scarfy.init();
-    defer scarfy.deinit();
+    defer scarfy.close();
 
     while (!rl.windowShouldClose()) {
         scarfy.update();
@@ -161,5 +187,6 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.ray_white);
 
         scarfy.draw();
+        scarfy.audio();
     }
 }
