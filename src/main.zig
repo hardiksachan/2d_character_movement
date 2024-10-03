@@ -80,7 +80,9 @@ const Scarfy = struct {
 
         if (rl.isKeyPressed(rl.KeyboardKey.key_space)) {
             self.velocity.y = self.jump_charge_max;
-        } else if (rl.isKeyDown(rl.KeyboardKey.key_right) and !rl.isKeyDown(rl.KeyboardKey.key_left)) {
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.key_right) and !rl.isKeyDown(rl.KeyboardKey.key_left)) {
             self.velocity.x = self.walk_speed;
         } else if (rl.isKeyDown(rl.KeyboardKey.key_left) and !rl.isKeyDown(rl.KeyboardKey.key_right)) {
             self.velocity.x = -self.walk_speed;
@@ -97,8 +99,8 @@ const Scarfy = struct {
             self.position.y += gravity;
         } else {
             self.velocity.y = 0;
-            self.position.x += self.velocity.x;
         }
+        self.position.x += self.velocity.x;
     }
 
     fn animate(self: *Scarfy) void {
