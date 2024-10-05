@@ -22,30 +22,32 @@ pub const Command = struct {
     }
 };
 
-pub fn handleInput() Command {
-    var command = Command{};
+pub const InputHandler = struct {
+    pub fn handleInput(self: *const InputHandler) Command {
+        var command = Command{};
 
-    if (left() and !right()) {
-        command.toggle(Command.Value.Left);
+        if (self.left() and !self.right()) {
+            command.toggle(Command.Value.Left);
+        }
+        if (self.right() and !self.left()) {
+            command.toggle(Command.Value.Right);
+        }
+        if (self.jump()) {
+            command.toggle(Command.Value.Jump);
+        }
+
+        return command;
     }
-    if (right() and !left()) {
-        command.toggle(Command.Value.Right);
-    }
-    if (jump()) {
-        command.toggle(Command.Value.Jump);
+
+    fn left(_: *const InputHandler) bool {
+        return rl.isKeyDown(rl.KeyboardKey.key_left) or rl.isKeyDown(rl.KeyboardKey.key_a);
     }
 
-    return command;
-}
+    fn right(_: *const InputHandler) bool {
+        return rl.isKeyDown(rl.KeyboardKey.key_right) or rl.isKeyDown(rl.KeyboardKey.key_d);
+    }
 
-fn left() bool {
-    return rl.isKeyDown(rl.KeyboardKey.key_left) or rl.isKeyDown(rl.KeyboardKey.key_a);
-}
-
-fn right() bool {
-    return rl.isKeyDown(rl.KeyboardKey.key_right) or rl.isKeyDown(rl.KeyboardKey.key_d);
-}
-
-fn jump() bool {
-    return rl.isKeyDown(rl.KeyboardKey.key_space);
-}
+    fn jump(_: *const InputHandler) bool {
+        return rl.isKeyDown(rl.KeyboardKey.key_space);
+    }
+};

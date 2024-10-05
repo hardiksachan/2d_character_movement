@@ -1,6 +1,6 @@
 const rl = @import("raylib");
 const Scarfy = @import("scarfy.zig").Scarfy;
-const InputHandler = @import("input_handler.zig");
+const InputHandler = @import("input_handler.zig").InputHandler;
 
 pub fn main() !void {
     const screenWidth = 1280;
@@ -14,12 +14,14 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
+    const input_handler = InputHandler{};
+
     var scarfy = Scarfy{};
     scarfy.init();
     defer scarfy.close();
 
     while (!rl.windowShouldClose()) {
-        scarfy.update(InputHandler.handleInput());
+        scarfy.update(input_handler.handleInput());
 
         rl.beginDrawing();
         defer rl.endDrawing();
