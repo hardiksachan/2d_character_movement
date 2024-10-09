@@ -1,6 +1,6 @@
 const rl = @import("raylib");
-const Scarfy = @import("scarfy.zig").Scarfy;
 const InputHandler = @import("input_handler.zig").InputHandler;
+const Scarfy = @import("scarfy.zig").Scarfy;
 
 pub fn main() !void {
     const screenWidth = 1280;
@@ -16,12 +16,14 @@ pub fn main() !void {
 
     const input_handler = InputHandler{};
 
-    var scarfy = Scarfy{};
-    scarfy.init();
+    var scarfy = Scarfy.init();
     defer scarfy.close();
 
     while (!rl.windowShouldClose()) {
-        scarfy.update(input_handler.handleInput());
+        const cmd = input_handler.handleInput();
+        scarfy.handleCommand(cmd);
+        scarfy.audio();
+        scarfy.animate();
 
         rl.beginDrawing();
         defer rl.endDrawing();
@@ -29,6 +31,7 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.ray_white);
 
         scarfy.draw();
-        scarfy.audio();
+
+        rl.drawText(rl.textFormat("Command: %d", .{cmd.composite}), 0, 60, 20, rl.Color.red);
     }
 }
