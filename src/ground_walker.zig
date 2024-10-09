@@ -6,7 +6,7 @@ const HorizontalMovement = @import("physics/horizontal_movement.zig").Horizontal
 const Gravity = @import("physics/gravity.zig").Gravity;
 const Jump = @import("physics/jump.zig").Jump;
 
-pub const Actor = struct {
+pub const GroundWalker = struct {
     move: HorizontalMovement,
     gravity: Gravity,
     jump: Jump,
@@ -14,15 +14,15 @@ pub const Actor = struct {
     position: rl.Vector2 = .{ .x = 0, .y = 0 },
     velocity: rl.Vector2 = .{ .x = 0, .y = 0 },
 
-    pub fn new(walk_speed: f32, jump_impulse: f32, gravity: f32) Actor {
-        return Actor{
+    pub fn new(walk_speed: f32, jump_impulse: f32, gravity: f32) GroundWalker {
+        return GroundWalker{
             .move = HorizontalMovement{ .speed = walk_speed },
             .gravity = Gravity{ .gravity = gravity },
             .jump = Jump{ .impulse = jump_impulse },
         };
     }
 
-    pub fn handleCommand(self: *Actor, command: Command, on_ground: bool) void {
+    pub fn handleCommand(self: *GroundWalker, command: Command, on_ground: bool) void {
         if (command.is(Command.Value.Jump)) {
             self.jump.apply(&self.velocity, on_ground);
         }

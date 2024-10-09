@@ -16,14 +16,12 @@ pub fn main() !void {
 
     const input_handler = InputHandler{};
 
-    var scarfy = Scarfy.init();
-    defer scarfy.close();
+    var scarfy = Scarfy.new();
+    defer scarfy.destory();
 
     while (!rl.windowShouldClose()) {
-        const cmd = input_handler.handleInput();
-        scarfy.handleCommand(cmd);
+        scarfy.handleCommand(input_handler.handleInput());
         scarfy.audio();
-        scarfy.animate();
 
         rl.beginDrawing();
         defer rl.endDrawing();
@@ -31,7 +29,5 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.ray_white);
 
         scarfy.draw();
-
-        rl.drawText(rl.textFormat("Command: %d", .{cmd.composite}), 0, 60, 20, rl.Color.red);
     }
 }

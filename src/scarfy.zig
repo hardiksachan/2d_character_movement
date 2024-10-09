@@ -1,138 +1,76 @@
 const rl = @import("raylib");
 
 const Command = @import("input_handler.zig").Command;
-const Actor = @import("actor.zig").Actor;
+const GroundWalker = @import("ground_walker.zig").GroundWalker;
+const AnimatedSprite = @import("sprite.zig").AnimatedSprite;
 
 const gravity: f32 = 7.0;
 
 pub const Scarfy = struct {
-    actor: Actor,
+    walker: GroundWalker,
+    sprite: AnimatedSprite,
 
-    texture: rl.Texture,
     footstep_sound: rl.Sound,
     landing_sound: rl.Sound,
     ground_y: f32,
 
-    frame_count: i32 = 6,
-    frame_index: i32 = 0,
-    frame_delay_counter: i32 = 0,
-    frame_delay: i32 = 6,
-
-    stationary_frame: i32 = 2,
-    jump_up_frame: i32 = 3,
-    jump_down_frame: i32 = 4,
-
-    ground_frames: [2]i32 = .{ 1, 4 },
     was_grounded: bool = false,
 
-    direction_multiplier: i32 = 1,
-
-    pub fn init() Scarfy {
-        var scarfy = Scarfy{
-            .ground_y = 0,
-            .texture = undefined,
-            .footstep_sound = undefined,
-            .landing_sound = undefined,
-            .actor = Actor.new(5, 10, 0.7),
+    pub fn new() Scarfy {
+        const texture = rl.loadTexture("resources/scarfy.png");
+        const frames = .{
+            .count = 6,
+            .current = 0,
+            .delay_counter = 0,
+            .delay = 6,
+            .stationary = 2,
+            .jump_up = 3,
+            .jump_down = 4,
+            .ground = (&[_]i32{ 1, 4 }),
         };
-        // Move the calculation of ground_y to runtime
-        scarfy.ground_y = 0.75 * @as(f32, @floatFromInt(rl.getScreenHeight()));
-        scarfy.texture = rl.loadTexture("resources/scarfy.png");
-        scarfy.footstep_sound = rl.loadSound("resources/footstep.mp3");
-        scarfy.landing_sound = rl.loadSound("resources/landing.mp3");
-        return scarfy;
+        const sprite = AnimatedSprite.new(texture, frames);
+        const walker = GroundWalker.new(5, 10, 0.5);
+
+        return .{
+            .walker = walker,
+            .sprite = sprite,
+            .footstep_sound = rl.loadSound("resources/footstep.mp3"),
+            .landing_sound = rl.loadSound("resources/landing.mp3"),
+            .ground_y = 0.75 * @as(f32, @floatFromInt(rl.getScreenHeight())),
+        };
     }
 
     pub fn handleCommand(self: *Scarfy, command: Command) void {
-        self.actor.handleCommand(command, self.grounded());
+        self.was_grounded = self.grounded();
+        self.walker.handleCommand(command, self.grounded());
+        self.sprite.animate(self.walker.velocity);
     }
 
-    pub fn draw(self: *const Scarfy) void {
-        self.drawScarfy();
-        self.drawDebug();
+    pub fn draw(self: *Scarfy) void {
+        self.sprite.draw(self.walker.position);
     }
 
-    pub fn audio(self: *Scarfy) void {
+    pub fn audio(self: *const Scarfy) void {
         if (self.grounded() and !self.was_grounded) {
             rl.playSound(self.landing_sound);
-        } else if (self.grounded() and self.actor.velocity.x != 0) {
-            for (self.ground_frames) |frame| {
-                if (self.frame_index == frame) {
+        } else if (self.grounded() and self.walker.velocity.x != 0) {
+            for (self.sprite.frames.ground) |frame| {
+                if (self.sprite.frames.current == frame) {
                     rl.playSound(self.footstep_sound);
                     break;
                 }
             }
         }
-        self.was_grounded = self.grounded();
     }
 
-    pub fn close(self: *Scarfy) void {
-        rl.unloadTexture(self.texture);
+    pub fn destory(self: *Scarfy) void {
+        self.sprite.destroy();
+
         rl.unloadSound(self.footstep_sound);
         rl.unloadSound(self.landing_sound);
     }
 
-    fn drawScarfy(self: *const Scarfy) void {
-        const frame_width = @divTrunc(@as(i32, self.texture.width), self.frame_count);
-        const source_rec = rl.Rectangle{
-            .x = @as(f32, @floatFromInt(frame_width * self.frame_index)),
-            .y = 0,
-            .width = @as(f32, @floatFromInt(self.direction_multiplier * frame_width)),
-            .height = @as(f32, @floatFromInt(self.texture.height)),
-        };
-
-        rl.drawTextureRec(
-            self.texture,
-            source_rec,
-            self.actor.position,
-            rl.Color.white,
-        );
-    }
-
-    fn drawDebug(self: *const Scarfy) void {
-        rl.drawRectangle(0, @intFromFloat(self.ground_y), rl.getScreenWidth(), 1, rl.Color.red);
-        rl.drawRectangleLines(
-            @intFromFloat(self.actor.position.x),
-            @intFromFloat(self.actor.position.y),
-            @intFromFloat(@as(f32, @floatFromInt(self.texture.width)) / 6.0),
-            @intFromFloat(@as(f32, @floatFromInt(self.texture.height))),
-            rl.Color.green,
-        );
-        const text_grounded = if (self.grounded()) "Grounded" else "Airborne";
-        rl.drawText(text_grounded, 0, 0, 20, rl.Color.red);
-
-        const text_jump_charge = rl.textFormat("Velocity | x = %.2f, y = %.2f", .{ self.actor.velocity.x, self.actor.velocity.y });
-        rl.drawText(text_jump_charge, 0, 20, 20, rl.Color.red);
-    }
-
-    pub fn animate(self: *Scarfy) void {
-        if (self.actor.velocity.x > 0) {
-            self.direction_multiplier = 1;
-        } else if (self.actor.velocity.x < 0) {
-            self.direction_multiplier = -1;
-        } else if (self.actor.velocity.x == 0) {
-            self.frame_index = self.stationary_frame;
-        }
-
-        if (self.actor.velocity.y > 0) {
-            self.frame_index = self.jump_up_frame;
-        } else if (!self.grounded()) {
-            self.frame_index = self.jump_down_frame;
-        }
-
-        if (self.actor.velocity.y > 0 or !self.grounded() or self.actor.velocity.x == 0) return;
-
-        self.frame_delay_counter += 1;
-        if (self.frame_delay_counter >= self.frame_delay) {
-            self.frame_delay_counter = 0;
-            self.frame_index += 1;
-        }
-        if (self.frame_index >= self.frame_count) {
-            self.frame_index = 0;
-        }
-    }
-
     fn grounded(self: *const Scarfy) bool {
-        return self.actor.position.y + @as(f32, @floatFromInt(self.texture.height)) >= self.ground_y;
+        return self.walker.position.y + @as(f32, @floatFromInt(self.sprite.texture.height)) >= self.ground_y;
     }
 };
