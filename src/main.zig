@@ -20,8 +20,7 @@ pub fn main() !void {
     defer scarfy.destory();
 
     while (!rl.windowShouldClose()) {
-        scarfy.handleCommand(input_handler.handleInput());
-        scarfy.audio();
+        scarfy.update(input_handler.handleInput());
 
         rl.beginDrawing();
         defer rl.endDrawing();
