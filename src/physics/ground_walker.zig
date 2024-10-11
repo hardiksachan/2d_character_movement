@@ -2,9 +2,9 @@ const rl = @import("raylib");
 
 const Command = @import("../input_handler.zig").Command;
 
-const HorizontalMovement = @import("../physics/horizontal_movement.zig").HorizontalMovement;
-const Gravity = @import("../physics/gravity.zig").Gravity;
-const Jump = @import("../physics/jump.zig").Jump;
+const HorizontalMovement = @import("behaviours/horizontal_movement.zig").HorizontalMovement;
+const Gravity = @import("behaviours/gravity.zig").Gravity;
+const Jump = @import("behaviours/jump.zig").Jump;
 
 pub const GroundWalker = struct {
     move: HorizontalMovement,

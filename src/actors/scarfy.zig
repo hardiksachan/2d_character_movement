@@ -1,7 +1,7 @@
 const rl = @import("raylib");
 
-const Command = @import("input_handler.zig").Command;
-const GroundWalker = @import("actors/ground_walker.zig").GroundWalker;
+const Command = @import("../input_handler.zig").Command;
+const GroundWalker = @import("../physics/ground_walker.zig").GroundWalker;
 
 const gravity: f32 = 7.0;
 
@@ -10,7 +10,8 @@ pub const Scarfy = struct {
     sprite: ScarfySprite,
     audio: ScarfyAudio,
 
-    ground_y: f32,
+    was_grounded: bool = false,
+    on_ground: bool = false,
 
     pub fn new() Scarfy {
         const texture = rl.loadTexture("resources/scarfy.png");
@@ -32,39 +33,70 @@ pub const Scarfy = struct {
             .walker = walker,
             .sprite = sprite,
             .audio = a,
-            .ground_y = 0.75 * @as(f32, @floatFromInt(rl.getScreenHeight())),
+            .was_grounded = false,
+            .on_ground = false,
         };
     }
 
-    pub fn destory(self: *Scarfy) void {
+    pub fn destroy(ctx: *anyopaque) void {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
         self.sprite.destroy();
     }
 
-    pub fn update(self: *Scarfy, command: Command) void {
-        self.walker.handleCommand(command, self.grounded());
+    pub fn update(ctx: *anyopaque, command: Command, on_ground: bool) void {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
+        self.was_grounded = self.on_ground;
+        self.on_ground = on_ground;
+
+        self.walker.handleCommand(command, on_ground);
         self.sprite.animate(self.walker.velocity);
     }
 
-    pub fn draw(self: *Scarfy) void {
+    pub fn draw(ctx: *anyopaque) void {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
         self.sprite.draw(self.walker.position);
-        self.audio.play(self.grounded(), self.walker.velocity, self.sprite.isGroundFrame());
     }
 
-    pub fn audio(self: *const Scarfy) void {
-        if (self.grounded() and !self.was_grounded) {
-            rl.playSound(self.landing_sound);
-        } else if (self.grounded() and self.walker.velocity.x != 0) {
-            for (self.sprite.frames.ground) |frame| {
-                if (self.sprite.frames.current == frame) {
-                    rl.playSound(self.footstep_sound);
-                    break;
-                }
-            }
-        }
+    pub fn audio(ctx: *anyopaque) void {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
+        self.audio.play(self.was_grounded, self.on_ground, self.walker.velocity, self.sprite.isGroundFrame());
     }
 
-    fn grounded(self: *const Scarfy) bool {
-        return self.walker.position.y + @as(f32, @floatFromInt(self.sprite.texture.height)) >= self.ground_y;
+    pub fn position(ctx: *anyopaque) rl.Vector2 {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
+        return self.walker.position;
+    }
+
+    pub fn velocity(ctx: *anyopaque) rl.Vector2 {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
+        return self.walker.velocity;
+    }
+
+    pub fn boundingBox(ctx: *anyopaque) rl.Rectangle {
+        const self: *Scarfy = @ptrCast(@alignCast(ctx));
+
+        const ulPosition = self.upperLeftPosition();
+        const frame_size = self.sprite.frameSize();
+        return rl.Rectangle{
+            .x = ulPosition.x,
+            .y = ulPosition.y,
+            .width = frame_size.x,
+            .height = frame_size.y,
+        };
+    }
+
+    fn upperLeftPosition(self: *Scarfy) rl.Vector2 {
+        const frame_size = self.sprite.frameSize();
+        return rl.Vector2{
+            .x = self.walker.position.x - frame_size.x / 2,
+            .y = self.walker.position.y - frame_size.y,
+        };
     }
 };
 
@@ -140,13 +172,18 @@ pub const ScarfySprite = struct {
         }
         return false;
     }
+
+    pub fn frameSize(self: *const ScarfySprite) rl.Vector2 {
+        return rl.Vector2{
+            .x = @as(f32, @floatFromInt(@divTrunc(@as(i32, self.texture.width), self.frames.count))),
+            .y = @as(f32, @floatFromInt(self.texture.height)),
+        };
+    }
 };
 
 const ScarfyAudio = struct {
     footstep: rl.Sound,
     landing: rl.Sound,
-
-    was_grounded: bool = false,
 
     pub fn new() ScarfyAudio {
         return .{
@@ -155,14 +192,12 @@ const ScarfyAudio = struct {
         };
     }
 
-    pub fn play(self: *ScarfyAudio, on_ground: bool, velocity: rl.Vector2, is_ground_frame: bool) void {
-        if (on_ground and !self.was_grounded) {
+    pub fn play(self: *ScarfyAudio, was_grounded: bool, on_ground: bool, velocity: rl.Vector2, is_ground_frame: bool) void {
+        if (on_ground and !was_grounded) {
             rl.playSound(self.landing);
         } else if (on_ground and velocity.x != 0 and is_ground_frame) {
             rl.playSound(self.footstep);
         }
-
-        self.was_grounded = on_ground;
     }
 
     pub fn destroy(self: *ScarfyAudio) void {

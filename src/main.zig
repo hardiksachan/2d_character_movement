@@ -1,6 +1,7 @@
 const rl = @import("raylib");
 const InputHandler = @import("input_handler.zig").InputHandler;
-const Scarfy = @import("scarfy.zig").Scarfy;
+const Scarfy = @import("actors/scarfy.zig").Scarfy;
+const Actor = @import("actors/actor.zig").Actor;
 
 pub fn main() !void {
     const screenWidth = 1280;
@@ -17,16 +18,18 @@ pub fn main() !void {
     const input_handler = InputHandler{};
 
     var scarfy = Scarfy.new();
-    defer scarfy.destory();
+    var actor = Actor.from(&scarfy, Scarfy);
+    defer actor.destroy();
 
     while (!rl.windowShouldClose()) {
-        scarfy.update(input_handler.handleInput());
+        actor.update(input_handler.handleInput(), true);
 
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.ray_white);
 
-        scarfy.draw();
+        actor.draw();
+        actor.audio();
     }
 }
